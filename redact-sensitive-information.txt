@@ -1,0 +1,68 @@
+// ==UserScript==
+// @name         Redact-Sensitive-Information
+// @namespace    http://tampermonkey.net/
+// @version      0.3
+// @description  this script allows you to Redact info.
+// @author       Steelfox79
+// @match        *://*/*
+// @grant        none
+// @run-at       document-start
+// ==/UserScript==
+
+(function () {
+    "use strict";
+
+    const redactionRules = [
+        { target: "REDACTED1", replacement: "REDACTED1" },
+        { target: "REDACTED2", replacement: "REDACTED2" },
+        // Add more rules as needed
+    ];
+
+    function showOverlay() {
+        const overlay = document.createElement("div");
+        overlay.id = "redactionOverlay";
+        overlay.style.position = "fixed";
+        overlay.style.top = "0";
+        overlay.style.left = "0";
+        overlay.style.width = "100vw";
+        overlay.style.height = "100vh";
+        overlay.style.backgroundColor = "black";
+        overlay.style.zIndex = "1000000";
+        document.documentElement.appendChild(overlay);
+        overlay.innerHTML = '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">' +
+                            '<p style="color: #fff; font-size: 18px;">processing...</p>' +
+                            '</div>';
+    }
+
+    function removeOverlay() {
+        const overlay = document.getElementById("redactionOverlay");
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
+    function redactContent() {
+        function redactNode(node) {
+            if (node.tagName === 'SELECT' || (node.parentNode && node.parentNode.tagName === 'SELECT')) {
+                return;
+            }
+            if (node.nodeType === 3) {
+                redactionRules.forEach((rule) => {
+                    node.nodeValue = node.nodeValue.replace(new RegExp(rule.target, "gi"), rule.replacement);
+                });
+            } else if (node.nodeType === 1) {
+                Array.from(node.childNodes).forEach(redactNode);
+            }
+        }
+
+        redactNode(document.body);
+        removeOverlay();
+    }
+
+    showOverlay();
+
+    window.addEventListener("load", () => {
+        redactContent();
+        setInterval(redactContent, 200);
+    });
+})();
